@@ -1,0 +1,13 @@
+# Copy to `.dev.vars` for local `astro dev` / `wrangler dev`. Never commit `.dev.vars`.
+# In production these are set in Webflow Cloud → Environment Variables (mark as "secret").
+
+# Webflow Data API token (Site settings → Apps & integrations → API access).
+# Needs CMS read scope. Used by the admin full-sync and the webhook to resolve items.
+WEBFLOW_API_TOKEN=""
+
+# Arbitrary strong random strings you generate (e.g. `openssl rand -hex 32`):
+WEBFLOW_WEBHOOK_SECRET=""   # appended to the webhook URL as ?key=...
+ADMIN_SYNC_KEY=""           # sent as the x-admin-key header to /api/admin/sync
+
+# Optional: override the origin allowed to call /api/contact-lookup
+# ALLOWED_ORIGIN="https://essexsolutions.webflow.io"

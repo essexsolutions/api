@@ -1,0 +1,247 @@
+<!-- =====================================================================
+     Essex Solutions — Returning-lead autofill (server-side lookup)
+     ---------------------------------------------------------------------
+     REPLACES the old Jetboost on-page collection list. No contact data is
+     shipped to the browser anymore: the email is sent to our own edge API
+     (/api/contact-lookup on Webflow Cloud), which returns ONLY the one
+     matching contact — or nothing.
+
+     WHERE TO PASTE:
+       Webflow → /contact → Page Settings → "Before </body> tag".
+
+     ALSO DO (important):
+       • Delete the Jetboost results Collection List from the /contact page.
+       • Remove the `jetboost-list-search-input-6xn5` class from the #Email
+         field (that class is what let Jetboost disable the submit button).
+       • You can keep/remove the Jetboost site embed; it's unused here.
+
+     WHAT IT DOES:
+       • On a valid email (debounced), calls /api/contact-lookup?email=…
+       • On a match: autofills Organization / First / Last / City / Phone
+         (text) and selects the Role / Region radios, shows a green check.
+       • On no match: fills nothing (new lead).
+       • Clears autofilled values if the user changes the email away from a
+         match — but never wipes what a brand-new lead typed themselves.
+       • Validates "work email only" (rejects free/disposable providers).
+     ===================================================================== -->
+
+<style>
+  .multi-form17_input-field { position: relative; }
+  .lead-status-icon{
+    position:absolute; top:50%; right:14px;
+    transform:translateY(-50%) scale(.5);
+    width:22px; height:22px; display:flex; align-items:center; justify-content:center;
+    border-radius:50%; background:#16a34a; color:#fff;
+    opacity:0; pointer-events:none; z-index:3;
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  .lead-status-icon.is-visible{ opacity:1; transform:translateY(-50%) scale(1); }
+  .lead-status-icon svg{ width:13px; height:13px; display:block; }
+  .form_input.is-email-invalid{ border-color:#dc2626 !important; background-color:#fef2f2; }
+  .form_input.is-email-valid  { border-color:#16a34a !important; }
+  .form_input.is-lead-match   { padding-right:44px; }
+  .lead-email-msg{ display:none; margin-top:6px; font-size:.85rem; line-height:1.35; color:#dc2626; }
+  .lead-email-msg.is-visible{ display:block; }
+</style>
+
+<script>
+(function () {
+  "use strict";
+  if (window.__essexLeadAutofill) return;
+  window.__essexLeadAutofill = true;
+
+  /* ---------------- CONFIG ---------------- */
+  var CFG = {
+    // Same-origin path to the Webflow Cloud app (mount path = /api).
+    lookupUrl:  "/api/contact-lookup",
+    emailInput: "#Email",
+    lookupDebounceMs: 350,   // wait after typing stops before hitting the API
+    minLen: 5,
+
+    // lookup JSON key  ->  form field
+    fields: [
+      { key: "organization", sel: "#Organization", kind: "text"  },
+      { key: "firstName",    sel: "#First-Name",   kind: "text"  },
+      { key: "lastName",     sel: "#Last-Name",    kind: "text"  },
+      { key: "city",         sel: "#City",         kind: "text"  },
+      { key: "phone",        sel: "#Phone",        kind: "text"  },
+      { key: "role",         sel: "role",          kind: "radio" },
+      { key: "region",       sel: "region",        kind: "radio" }
+    ],
+    radioActiveClass: "is-active-inputactive"
+  };
+
+  var MSG = {
+    syntax:     "Please enter a valid email address.",
+    free:       "Please use your work email — personal addresses (Gmail, Outlook, etc.) aren’t accepted.",
+    disposable: "Temporary / disposable email addresses aren’t accepted. Please use your work email."
+  };
+
+  var norm = function (s){ return s == null ? "" : String(s).trim(); };
+  var lc   = function (s){ return norm(s).toLowerCase(); };
+
+  /* ---------------- work-email validation ---------------- */
+  var EMAIL_RE = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
+  var FREE = new Set(["gmail.com","googlemail.com","yahoo.com","ymail.com","hotmail.com","outlook.com","live.com","msn.com","aol.com","icloud.com","me.com","mac.com","proton.me","protonmail.com","pm.me","gmx.com","mail.com","zoho.com","yandex.com","mail.ru","fastmail.com","hey.com"]);
+  var DISP = new Set(["mailinator.com","guerrillamail.com","10minutemail.com","tempmail.com","temp-mail.org","yopmail.com","getnada.com","maildrop.cc","trashmail.com","sharklasers.com","throwawaymail.com","dispostable.com","1secmail.com","moakt.com","mohmal.com"]);
+
+  function classify(raw){
+    var e = lc(raw);
+    if (!e) return { state: "empty" };
+    if (!EMAIL_RE.test(e)) return { state: "invalid", reason: "syntax" };
+    var domain = e.split("@")[1];
+    if (DISP.has(domain)) return { state: "invalid", reason: "disposable" };
+    if (FREE.has(domain)) return { state: "invalid", reason: "free" };
+    return { state: "valid" };
+  }
+
+  /* ---------------- boot ---------------- */
+  var emailInput, form, fieldWrap, icon, msgEl;
+  var tries = 0;
+  (function boot(){
+    emailInput = document.querySelector(CFG.emailInput);
+    if (!emailInput) { if (tries++ < 40) return void setTimeout(boot, 150); return; }
+    form = emailInput.closest("form") || document;
+    init();
+  })();
+
+  function init(){
+    fieldWrap = emailInput.parentElement;
+    if (getComputedStyle(fieldWrap).position === "static") fieldWrap.style.position = "relative";
+
+    icon = document.createElement("span");
+    icon.className = "lead-status-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"></polyline></svg>';
+    fieldWrap.appendChild(icon);
+
+    msgEl = document.createElement("div");
+    msgEl.className = "lead-email-msg";
+    msgEl.setAttribute("role", "alert");
+    (fieldWrap.parentElement || fieldWrap).appendChild(msgEl);
+
+    var t;
+    emailInput.addEventListener("input", function () {
+      clearTimeout(t); t = setTimeout(evaluate, CFG.lookupDebounceMs);
+    });
+    emailInput.addEventListener("change", function () { clearTimeout(t); evaluate(); });
+    emailInput.addEventListener("blur",   function () { clearTimeout(t); evaluate(); });
+
+    evaluate();
+  }
+
+  /* ---------------- autofill engine ---------------- */
+  var didAutofill = false;
+  var lastQueried = "";
+  var reqSeq = 0;
+
+  function setText(sel, val){
+    var el = form.querySelector(sel);
+    if (!el) return;
+    el.value = val;
+    el.dispatchEvent(new Event("input",  { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function setRadio(name, val){
+    var radios = form.querySelectorAll('input[type="radio"][name="' + name + '"]');
+    var hit = null;
+    radios.forEach(function (r){
+      var on = lc(r.value) === lc(val);
+      r.checked = on;
+      var label = r.closest("label.w-radio") || r.parentElement;
+      if (label){
+        var dot = label.querySelector(".w-radio-input");
+        if (dot) dot.classList.toggle("w--redirected-checked", on);
+        if (CFG.radioActiveClass) label.classList.toggle(CFG.radioActiveClass, on);
+      }
+      if (on) hit = r;
+    });
+    if (hit) hit.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function fillFrom(contact){
+    CFG.fields.forEach(function (f){
+      var val = norm(contact[f.key]);
+      if (f.kind === "radio") setRadio(f.sel, val);
+      else setText(f.sel, val);
+    });
+    didAutofill = true;
+  }
+
+  function clearFill(){
+    if (!didAutofill) return; // never wipe what a brand-new lead typed
+    CFG.fields.forEach(function (f){
+      if (f.kind === "radio") setRadio(f.sel, " ");
+      else setText(f.sel, "");
+    });
+    didAutofill = false;
+  }
+
+  /* ---------------- UI state ---------------- */
+  function setState(s){
+    emailInput.classList.remove("is-lead-match","is-email-valid","is-email-invalid");
+    if (icon) icon.classList.remove("is-visible");
+    if (s === "match")        { emailInput.classList.add("is-lead-match","is-email-valid"); if (icon) icon.classList.add("is-visible"); }
+    else if (s === "valid")   emailInput.classList.add("is-email-valid");
+    else if (s === "invalid") emailInput.classList.add("is-email-invalid");
+  }
+  function showMsg(text){
+    if (!msgEl) return;
+    msgEl.textContent = text || "";
+    msgEl.classList.toggle("is-visible", !!text);
+  }
+
+  /* ---------------- main ---------------- */
+  function evaluate(){
+    if (!emailInput) return;
+    var raw = emailInput.value, typed = lc(raw);
+
+    if (!typed){ clearFill(); setState("neutral"); showMsg(""); return; }
+    if (typed.length < CFG.minLen || !EMAIL_RE.test(typed)){
+      clearFill();
+      // don't nag while still typing; only show syntax error after it's clearly wrong on blur
+      setState("neutral"); showMsg("");
+      return;
+    }
+
+    // Look the email up server-side.
+    lookup(typed);
+  }
+
+  function lookup(email){
+    if (email === lastQueried) return;
+    lastQueried = email;
+    var seq = ++reqSeq;
+
+    fetch(CFG.lookupUrl + "?email=" + encodeURIComponent(email), {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      credentials: "omit"
+    })
+      .then(function (r){ return r.ok ? r.json() : { match: false }; })
+      .then(function (data){
+        if (seq !== reqSeq) return;             // a newer keystroke superseded this
+        if (lc(emailInput.value) !== email) return;
+
+        if (data && data.match && data.contact){ // returning lead
+          fillFrom(data.contact); setState("match"); showMsg("");
+          return;
+        }
+        // new / unknown lead -> validate work email, fill nothing
+        clearFill();
+        var v = classify(email);
+        if (v.state === "valid"){ setState("valid"); showMsg(""); }
+        else { setState("invalid"); showMsg(MSG[v.reason] || MSG.syntax); }
+      })
+      .catch(function (){
+        if (seq !== reqSeq) return;
+        // On network error, fall back to local validation so the form still works.
+        clearFill();
+        var v = classify(email);
+        if (v.state === "valid"){ setState("valid"); showMsg(""); }
+        else { setState("invalid"); showMsg(MSG[v.reason] || MSG.syntax); }
+      });
+  }
+})();
+</script>

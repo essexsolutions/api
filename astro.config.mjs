@@ -1,0 +1,15 @@
+// @ts-check
+import { defineConfig } from "astro/config";
+import cloudflare from "@astrojs/cloudflare";
+
+// IMPORTANT: `base` must match the mount path you choose in Webflow Cloud.
+// If you mount this app at `/api`, every route below is served under
+// https://essexsolutions.webflow.io/api/...
+// e.g. src/pages/contact-lookup.ts  ->  /api/contact-lookup
+export default defineConfig({
+  output: "server",
+  base: "/api",
+  adapter: cloudflare({
+    platformProxy: { enabled: true }, // gives `locals.runtime.env` bindings in `astro dev`
+  }),
+});

@@ -62,7 +62,10 @@ Webflow CMS "Contacts" ──(full sync, one-time)──►  D1 table `contacts`
    - Delete the Jetboost results **Collection List** from the page.
    - Remove the `jetboost-list-search-input-6xn5` class from the `#Email` field
      (this class is what let Jetboost disable the Submit button — see the original bug).
-   - Paste [`embed/contact-autofill.html`](embed/contact-autofill.html) into **Page Settings → Before `</body>`**
+   - Load the autofill front-end from jsDelivr (its source of truth is the
+     `essexsolutions/essex-tools` repo — `essex-email-autofill.js` + `.css`).
+     See [`embed/contact-autofill.html`](embed/contact-autofill.html) for the exact
+     `<link>` + `<script>` block to paste into **Page Settings → Before `</body>`**
      (replacing the old `essex-jetboost-autofill` embed).
 
 ## Notes / decisions

@@ -9,6 +9,12 @@ import cloudflare from "@astrojs/cloudflare";
 export default defineConfig({
   output: "server",
   base: "/api",
+  // Disable Astro's form-CSRF origin check. It blocks POSTs that look like
+  // cross-site form submissions ("Cross-site POST form submissions are
+  // forbidden") — which broke the admin-sync curl and would block the Webflow
+  // webhook. Safe here: every endpoint has its own auth (same-origin gate,
+  // admin key, webhook secret) and the app uses no cookies/sessions.
+  security: { checkOrigin: false },
   adapter: cloudflare({
     platformProxy: { enabled: true }, // gives `locals.runtime.env` bindings in `astro dev`
   }),

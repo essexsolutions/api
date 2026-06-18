@@ -11,7 +11,7 @@ The app is **read-mostly**: it mirrors the Webflow Contacts CMS into D1 and serv
 ## Two repos, one feature
 
 - **`essexsolutions/api`** (this repo) — the backend. Mounted at `/api` on the site.
-- **`essexsolutions/essex-tools`** — the front-end script (`essex-email-autofill.js` + `.css`) that runs on `/contact` and calls this app. Served via jsDelivr pinned to a tag (currently `@v2.0.0`). Local path: `../essex-tools`.
+- **`essexsolutions/essex-tools`** — the front-end script (`essex-email-autofill.js` + `.css`) that runs on `/contact` and calls this app. Served via jsDelivr pinned to a tag (currently `@v2.1.0`). Local path: `../essex-tools`.
 
 If you change the lookup's request/response shape here, update `essex-tools/essex-email-autofill.js` too, then cut a new `essex-tools` tag and bump the jsDelivr `@v…` in `embed/contact-autofill.html` + README.
 

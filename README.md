@@ -141,9 +141,9 @@ Webflow Cloud builds from this repo on GitHub (`essexsolutions/api`) automatical
 3. **Page Settings → Before `</body>`**, paste the loader (see [`embed/contact-autofill.html`](embed/contact-autofill.html)), pinned to a tagged release of `essex-tools`:
    ```html
    <link rel="stylesheet"
-     href="https://cdn.jsdelivr.net/gh/essexsolutions/essex-tools@v2.0.0/essex-email-autofill.css">
+     href="https://cdn.jsdelivr.net/gh/essexsolutions/essex-tools@v2.1.0/essex-email-autofill.css">
    <script
-     src="https://cdn.jsdelivr.net/gh/essexsolutions/essex-tools@v2.0.0/essex-email-autofill.js"></script>
+     src="https://cdn.jsdelivr.net/gh/essexsolutions/essex-tools@v2.1.0/essex-email-autofill.js"></script>
    ```
 4. Publish.
 

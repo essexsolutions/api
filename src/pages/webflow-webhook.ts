@@ -3,6 +3,7 @@ import { getEnv } from "../lib/env";
 import { json, safeEqual } from "../lib/http";
 import { fetchContact } from "../lib/webflow";
 import { deleteContact, upsertContact } from "../lib/store";
+import { COLLECTIONS } from "../lib/config";
 
 export const prerender = false;
 
@@ -39,6 +40,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const payload = body?.payload ?? body;
   const itemId: string | undefined = payload?.id ?? payload?.itemId;
   if (!itemId) return json({ error: "no_item_id" }, { status: 400 });
+
+  // v2 webhooks fire for EVERY collection on the site. Ignore anything that
+  // isn't the Contacts collection so we don't make wasted Webflow API calls.
+  const collectionId: string | undefined = payload?.collectionId;
+  if (collectionId && collectionId !== COLLECTIONS.contacts) {
+    return json({ ok: true, action: "ignored_collection", collectionId });
+  }
 
   try {
     if (

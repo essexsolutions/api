@@ -5,7 +5,7 @@
 export interface Env {
   // Storage bindings (declared in wrangler.json; IDs assigned by Webflow Cloud)
   DB: D1Database;
-  RATE_LIMIT: KVNamespace;
+  RATE_LIMIT?: KVNamespace; // optional: add a KV namespace later to enable rate limiting
 
   // Secrets (set in Webflow Cloud → Environment Variables, marked "secret")
   WEBFLOW_API_TOKEN?: string; // Data API token; used by admin full-sync only

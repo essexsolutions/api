@@ -15,11 +15,6 @@
       "migrations_dir": "./migrations"
     }
   ],
-  "kv_namespaces": [
-    {
-      "binding": "RATE_LIMIT"
-    }
-  ],
   "observability": {
     "enabled": true
   }

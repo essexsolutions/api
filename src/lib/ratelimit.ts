@@ -7,6 +7,10 @@ export async function rateLimit(
   key: string,
   opts: { limit: number; windowSeconds: number },
 ): Promise<{ ok: boolean; remaining: number }> {
+  // KV is optional: if the RATE_LIMIT store isn't bound yet, don't block —
+  // the lookup still works, just without enumeration throttling. Add the KV
+  // namespace later to turn this on.
+  if (!env.RATE_LIMIT) return { ok: true, remaining: opts.limit };
   const bucket = `rl:${key}:${Math.floor(Date.now() / 1000 / opts.windowSeconds)}`;
   const current = parseInt((await env.RATE_LIMIT.get(bucket)) || "0", 10);
   if (current >= opts.limit) return { ok: false, remaining: 0 };

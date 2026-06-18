@@ -10,12 +10,36 @@ export const prerender = false;
 // GET /api/health  -> quick sanity check that the worker + D1 binding are live.
 export const GET: APIRoute = async ({ locals }) => {
   const env = getEnv(locals);
+
+  // Diagnostic: what bindings/vars can the app actually see right now?
+  // (key NAMES only — never values; secrets are not exposed.)
+  const seen = Object.keys(env || {}).sort();
+  const has = {
+    DB: !!env?.DB,
+    RATE_LIMIT: !!env?.RATE_LIMIT,
+    WEBFLOW_API_TOKEN: !!env?.WEBFLOW_API_TOKEN,
+    ADMIN_SYNC_KEY: !!env?.ADMIN_SYNC_KEY,
+    WEBFLOW_WEBHOOK_SECRET: !!env?.WEBFLOW_WEBHOOK_SECRET,
+  };
+
+  if (!env?.DB) {
+    return json(
+      {
+        ok: false,
+        error: "DB binding not found — the SQLite database isn't bound as `DB`.",
+        bindingsSeen: seen,
+        has,
+      },
+      { status: 500 },
+    );
+  }
+
   try {
     const [{ n }] = await db(env)
       .select({ n: sql<number>`count(*)` })
       .from(contacts);
-    return json({ ok: true, contacts: n });
+    return json({ ok: true, contacts: n, has });
   } catch (err) {
-    return json({ ok: false, error: String(err) }, { status: 500 });
+    return json({ ok: false, error: String(err), has }, { status: 500 });
   }
 };

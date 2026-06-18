@@ -54,9 +54,20 @@ Webflow CMS "Contacts" ──(full sync, one-time)──►  D1 table `contacts`
    # -> { "ok": true, "synced": N }
    ```
 
-4. **Wire the webhook** (Webflow → Site Settings → Apps & Integrations → Webhooks)
-   - URL: `https://essexsolutions.webflow.io/api/webflow-webhook?key=YOUR_WEBFLOW_WEBHOOK_SECRET`
-   - Triggers: `collection_item_created`, `collection_item_changed`, `collection_item_deleted`, `collection_item_unpublished`.
+4. **Keep D1 in sync** — choose one:
+   - **Scheduled sync (default, no custom domain needed):** `.github/workflows/sync.yml`
+     re-runs `/api/admin/sync` every 15 min. Add the repo secret `ADMIN_SYNC_KEY`
+     (GitHub → repo Settings → Secrets and variables → Actions). This is the active
+     approach because **Webflow rejects webhooks pointing at `*.webflow.io`**
+     ("Validation Error: Invalid hostname") — both the dashboard and the API.
+   - **Real-time webhook (requires a custom domain):** once the site serves from a
+     non-webflow.io domain, register webhooks at Webflow → Site Settings → Apps &
+     Integrations → Webhooks (or via the API):
+     - URL: `https://YOUR-CUSTOM-DOMAIN/api/webflow-webhook?key=YOUR_WEBFLOW_WEBHOOK_SECRET`
+     - Triggers: `collection_item_created`, `collection_item_changed`,
+       `collection_item_deleted`, `collection_item_unpublished`.
+     Then you can disable the scheduled workflow. The `/api/webflow-webhook` handler
+     is already built and ignores non-Contacts collections.
 
 5. **Update the `/contact` page in Webflow**
    - Delete the Jetboost results **Collection List** from the page.

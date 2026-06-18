@@ -1,0 +1,23 @@
+name: Sync contacts to D1
+
+# Webflow blocks webhooks that point back at *.webflow.io, so instead of a
+# real-time webhook we re-run the full sync on a schedule. The dataset is small,
+# so a full refresh is cheap. Switch to the webhook (see api README) once the
+# site has a custom domain and you want instant updates.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *" # every 15 minutes (UTC; GitHub may delay under load)
+  workflow_dispatch: {} # lets you run it on demand from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /api/admin/sync
+        run: |
+          resp=$(curl -sS -X POST "https://essexsolutions.webflow.io/api/admin/sync" \
+            -H "x-admin-key: ${{ secrets.ADMIN_SYNC_KEY }}" \
+            -H "Content-Type: application/json")
+          echo "Response: $resp"
+          echo "$resp" | grep -q '"ok":true' || { echo "::error::Sync failed"; exit 1; }

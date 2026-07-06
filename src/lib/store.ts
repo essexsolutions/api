@@ -40,13 +40,14 @@ export async function findByEmail(env: Env, email: string) {
   return rows[0] ?? null;
 }
 
-// Bulk replace — used by the admin full-sync. D1 has a ~100 bound-params and
-// statement-size limit, so we chunk inserts.
+// Bulk replace — used by the admin full-sync. D1 caps bound parameters at 100
+// per query, and each row binds one param per column. With 10 columns that's
+// max 10 rows/insert; we use 9 (90 params) to stay safely under the limit.
 export async function replaceAll(env: Env, recs: ContactRecord[]): Promise<number> {
   const d = db(env);
   await d.delete(contacts);
   const now = new Date().toISOString();
-  const CHUNK = 40;
+  const CHUNK = 9;
   for (let i = 0; i < recs.length; i += CHUNK) {
     const slice = recs.slice(i, i + CHUNK).map((r) => ({
       itemId: r.itemId,

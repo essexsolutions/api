@@ -8,8 +8,7 @@ export interface Env {
   RATE_LIMIT?: KVNamespace; // optional: add a KV namespace later to enable rate limiting
 
   // Secrets (set in Webflow Cloud → Environment Variables, marked "secret")
-  WEBFLOW_API_TOKEN?: string; // Data API token; used by admin full-sync only
-  WEBFLOW_WEBHOOK_SECRET?: string; // shared secret guarding the webhook URL
+  AIRTABLE_API_TOKEN?: string; // Airtable personal access token; used by admin full-sync only
   ADMIN_SYNC_KEY?: string; // shared secret guarding the manual full-sync
 
   // Optional overrides

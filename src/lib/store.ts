@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 import { contacts } from "../db/schema";
-import type { ContactRecord } from "./webflow";
+import type { ContactRecord } from "./airtable";
 import type { Env } from "./env";
 
 export function db(env: Env) {

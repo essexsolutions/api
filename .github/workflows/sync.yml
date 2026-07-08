@@ -1,9 +1,9 @@
 name: Sync contacts to D1
 
-# Webflow blocks webhooks that point back at *.webflow.io, so instead of a
-# real-time webhook we re-run the full sync on a schedule. The dataset is small,
-# so a full refresh is cheap. Switch to the webhook (see api README) once the
-# site has a custom domain and you want instant updates.
+# We re-run the full Airtable->D1 sync on a schedule rather than wiring up
+# Airtable webhooks (which require registration + refresh via the API). The
+# dataset is small, so a full refresh is cheap. See the api README for how to
+# switch to real-time Airtable webhooks later if you want instant updates.
 
 on:
   schedule:

@@ -17,9 +17,8 @@ export const GET: APIRoute = async ({ locals }) => {
   const has = {
     DB: !!env?.DB,
     RATE_LIMIT: !!env?.RATE_LIMIT,
-    WEBFLOW_API_TOKEN: !!env?.WEBFLOW_API_TOKEN,
+    AIRTABLE_API_TOKEN: !!env?.AIRTABLE_API_TOKEN,
     ADMIN_SYNC_KEY: !!env?.ADMIN_SYNC_KEY,
-    WEBFLOW_WEBHOOK_SECRET: !!env?.WEBFLOW_WEBHOOK_SECRET,
   };
 
   if (!env?.DB) {

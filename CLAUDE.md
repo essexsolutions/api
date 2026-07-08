@@ -6,7 +6,7 @@ Guidance for AI agents working in this repo. Read this before making changes.
 
 Astro 5 app on **Webflow Cloud** (Cloudflare Workers edge runtime + Cloudflare **D1** SQLite). It powers the returning-lead **email autofill** on the Essex Solutions `/contact` page: a server-side lookup that replaced a Jetboost on-page collection list. See `README.md` for the full story and operator runbook.
 
-The app is **read-mostly**: it mirrors the Webflow Contacts CMS into D1 and serves exact-email lookups. Webflow CMS is the source of truth; D1 is a cache.
+The app is **read-mostly**: it mirrors the **Airtable "Essex Website" Contacts table** into D1 and serves exact-email lookups. Airtable is the source of truth; D1 is a cache. (The site is *hosted* on Webflow Cloud, but Webflow is no longer a data source.)
 
 ## Two repos, one feature
 
@@ -35,26 +35,27 @@ Type-checking relies on `@cloudflare/workers-types`. `wrangler types` will fail 
 
 ## Hard rules / gotchas
 
-- **Edge runtime: `fetch` only.** No `axios`, no Node-only SDKs. The Webflow client in `src/lib/webflow.ts` is plain `fetch`.
+- **Edge runtime: `fetch` only.** No `axios`, no Node-only SDKs. The Airtable client in `src/lib/airtable.ts` is plain `fetch` against the Airtable REST API.
+- **Local secrets live in `.dev.vars`, not `.env`.** The Workers runtime (`getEnv` → `locals.runtime.env`) reads `.dev.vars`; a token in `.env` won't reach the endpoints. `.env` is Vite/build-time only.
 - **Migrations are additive-only.** `migrations/*.sql` run automatically on deploy and cannot be edited after deploying. To change schema, add `0001_*.sql` (and mirror it in `src/db/schema.ts`).
 - **`wrangler.json` D1 binding must keep `database_id`.** Without it the `DB` binding is undefined at runtime (`...reading 'prepare'`). Webflow assigns the real id on deploy; leave the placeholder if unknown.
 - **Don't re-enable Astro's CSRF check.** `astro.config.mjs` sets `security: { checkOrigin: false }` on purpose — it was blocking the admin-sync POST ("Cross-site POST form submissions are forbidden"). The app is cookieless, so this is safe; endpoints have their own auth.
 - **`base: "/api"` must match the Webflow Cloud mount path.** Don't change one without the other.
 - **KV (`RATE_LIMIT`) is optional.** `ratelimit.ts` no-ops if it isn't bound. Don't make code assume it exists.
-- **Secrets** (`WEBFLOW_API_TOKEN`, `ADMIN_SYNC_KEY`, `WEBFLOW_WEBHOOK_SECRET`) live in Webflow Cloud env vars, never in the repo. Local dev reads them from `.dev.vars` (gitignored).
+- **Secrets** (`AIRTABLE_API_TOKEN`, `ADMIN_SYNC_KEY`) live in Webflow Cloud env vars, never in the repo. Local dev reads them from `.dev.vars` (gitignored).
 
 ## Data model facts
 
-- Contacts collection `6a1f7c72210b21e4677a6515`; the **email is the CMS `name` field**. `organization` and `region` are *reference* fields resolved to names during sync (`src/lib/webflow.ts`). IDs live in `src/lib/config.ts`.
-- D1 `contacts` table is one row per contact, unique-indexed on `email` (lowercased).
+- Airtable base **"Essex Website"** (`appbcVBFejX0KdRQI`), **Contacts** table (`tbl0VVC8fPix0wtye`). The **email is the primary `Email Address` field**. `Organization` and `Region` are *linked-record* fields resolved to their primary `Name` during sync (`src/lib/airtable.ts`). All IDs and the field-name map live in `src/lib/config.ts`.
+- D1 `contacts` table is one row per contact, unique-indexed on `email` (lowercased). `item_id` holds the Airtable record id (`rec…`).
 
 ## Sync model
 
-- Real-time webhooks are **not usable**: Webflow rejects webhook URLs on `*.webflow.io` ("Invalid hostname"). The `/api/webflow-webhook` handler exists for when a custom domain is added.
-- Until then, `.github/workflows/sync.yml` calls `/api/admin/sync` every ~5 min (needs the `ADMIN_SYNC_KEY` GitHub repo secret). Manual run: Actions → "Sync contacts to D1" → Run workflow.
+- Sync is **scheduled, not real-time.** `.github/workflows/sync.yml` calls `/api/admin/sync` every ~5 min (needs the `ADMIN_SYNC_KEY` GitHub repo secret). Manual run: Actions → "Sync contacts to D1" → Run workflow.
+- Airtable *does* support webhooks, but they require API registration + periodic refresh, so we keep the cheap full-refresh cron. There is **no** webhook endpoint in this repo anymore (the old Webflow one was removed).
 
 ## When verifying changes
 
 - `npm run check` must pass (0 errors) before committing.
-- After deploy, sanity-check `/api/health` (reports bindings + contact count).
+- After deploy, sanity-check `/api/health` (reports bindings + contact count; `has.AIRTABLE_API_TOKEN` should be `true`).
 - `/api/contact-lookup` only works from the live site origin; it returns 403 elsewhere, so test it from the real `/contact` page, not curl/browser.

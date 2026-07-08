@@ -1,26 +1,30 @@
-// Static identifiers for the Essex Solutions Webflow site.
-// (Discovered via the Webflow Data API. Override via env vars if they ever change.)
-export const SITE_ID = "69ef8bfcc47da17447b4ed2b";
+// Static identifiers for the Essex Solutions Airtable base ("Essex Website").
+// (Discovered via the Airtable Meta API.)
+export const AIRTABLE_BASE_ID = "appbcVBFejX0KdRQI";
 
-export const COLLECTIONS = {
-  contacts: "6a1f7c72210b21e4677a6515",
-  organizations: "6a1f7c795cfaae86a5d55c93",
-  regions: "6a1f672c59188a4545ced660",
+export const TABLES = {
+  contacts: "tbl0VVC8fPix0wtye",
+  organizations: "tblwG9v0g6uwmyItV",
+  regions: "tblCzw8xnaNcQhyFu",
 } as const;
 
-// Map of Webflow Contacts field slug -> our D1 column.
-// The email lives in the `name` field; `organization` and `region` are
-// references resolved to their display names at sync time.
+// Map of Airtable Contacts field name -> our D1 column.
+// The email lives in the `Email Address` field (the table's primary field);
+// `organization` and `region` are linked records resolved to their primary
+// (`Name`) at sync time.
 export const CONTACT_FIELD = {
-  email: "name",
-  firstName: "first-name",
-  lastName: "last-name",
-  city: "city",
-  phone: "phone",
-  role: "role",
-  organization: "organization", // reference -> Organizations.name
-  region: "region", // reference -> Regions.name
+  email: "Email Address",
+  firstName: "First Name",
+  lastName: "Last Name",
+  city: "City / Province",
+  phone: "Phone",
+  role: "Role", // single-select -> stored as its label
+  organization: "Organization", // linked -> Organizations.Name
+  region: "Region", // linked -> Regions.Name
 } as const;
+
+// The primary/display field on the Organizations and Regions tables.
+export const REF_NAME_FIELD = "Name";
 
 export function normalizeEmail(raw: string | null | undefined): string {
   return (raw ?? "").trim().toLowerCase();
